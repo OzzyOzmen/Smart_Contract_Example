@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: Unlicensed
+
+//This is the example of smart contract created with solidity language.
+
+pragma solidity ^0.8.15;
+
+
+contract CyrptoTransfer {
+    // owner will send the money to the receivers
+    address owner;
+   
+    // this is for logging
+    event LogReceiverFundingReceived(address addr, uint amount, uint contractBalance);
+    
+    //we create constructor to make it work with debuging
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // define recievers that will recieve the money as receivers
+    struct Receiver {
+        address payable walletAddress;
+        string firstName;
+        string lastName;
+        uint releaseTime;
+        uint amount;
+        bool canWithdraw;
+    }
+
+    // set the array for receivers
+    Receiver[] public receivers; 
+
+    // set the onlyone that can add the receivers 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can add receiver");
+        _;
+    }
+
+    // add receivers to contract also we modified this function with onlyowner
+    function addReceiver(address payable walletAddress, string memory firstName, string memory lastName, uint releaseTime, uint amount, bool canWithdraw) public onlyOwner {
+        receivers.push(Receiver(
+            walletAddress,
+            firstName,
+            lastName,
+            releaseTime,
+            amount,
+            canWithdraw
+        ));
+    }
+    
+    // balance controlling
+    function balanceOf() public view returns(uint) {
+        return address(this).balance;
+    }
+
+    //deposit funds to contract, specifically to a receiver's account
+    function deposit(address walletAddress) payable public {
+        addToReceiversBalance(walletAddress);
+    }
+    
+    // adding balance to receivers
+    function addToReceiversBalance(address walletAddress) private {
+        for(uint i = 0; i < receivers.length; i++) {
+            if(receivers[i].walletAddress == walletAddress) {
+                receivers[i].amount += msg.value;
+                emit LogReceiverFundingReceived(walletAddress, msg.value, balanceOf());
+            }
+        }
+    }
+
+    // getting index for the reeivers will make any process
+    function getIndex(address walletAddress) view private returns(uint) {
+        for(uint i = 0; i < receivers.length; i++) {
+            if (receivers[i].walletAddress == walletAddress) {
+                return i;
+            }
+        }
+        return 999;
+    }
+
+    // receiver checks if able to withdraw
+    function availableToWithdraw(address walletAddress) public returns(bool) {
+        uint i = getIndex(walletAddress);
+        require(block.timestamp > receivers[i].releaseTime, "You cannot withdraw yet");
+        if (block.timestamp > receivers[i].releaseTime) {
+            receivers[i].canWithdraw = true;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // withdraw money
+    function withdraw(address payable walletAddress) payable public {
+        uint i = getIndex(walletAddress);
+        require(msg.sender == receivers[i].walletAddress, "You must be the kid to withdraw");
+        require(receivers[i].canWithdraw == true, "You are not able to withdraw at this time");
+        receivers[i].walletAddress.transfer(receivers[i].amount);
+    }
+
+}
