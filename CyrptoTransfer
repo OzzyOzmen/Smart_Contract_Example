@@ -93,7 +93,7 @@ contract CyrptoTransfer {
     // withdraw money
     function withdraw(address payable walletAddress) payable public {
         uint i = getIndex(walletAddress);
-        require(msg.sender == receivers[i].walletAddress, "You must be the kid to withdraw");
+        require(msg.sender == receivers[i].walletAddress, "You must be the right receiver to withdraw");
         require(receivers[i].canWithdraw == true, "You are not able to withdraw at this time");
         receivers[i].walletAddress.transfer(receivers[i].amount);
     }
